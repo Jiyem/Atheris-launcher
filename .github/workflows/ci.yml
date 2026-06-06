@@ -3,8 +3,10 @@ on:
   push:
     branches: [ master ]
 
+# TRÈS IMPORTANT : On donne les pleins droits pour écrire les releases et les packages
 permissions:
   contents: write
+  packages: write
 
 jobs:
   build-and-release:
@@ -32,17 +34,17 @@ jobs:
         run: npm ci
         shell: bash
 
-      # Cette étape compile l'application ET tente de la publier directement dans les Releases GitHub
+      # Compilation et publication (va créer un Draft dans vos Releases)
       - name: Build and Publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # electron-builder utilise souvent GITHUB_TOKEN ou GH_TOKEN
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build -- --publish always
         shell: bash
 
-      # SÉCURITÉ : Si la publication automatique échoue, on sauvegarde quand même les fichiers
-      # Vous pourrez télécharger le .exe directement depuis l'onglet Actions de GitHub
-      - name: Sauvegarder les exécutables (Artifacts)
+      # SÉCURITÉ ABSOLUE : Sauvegarde les fichiers dans l'onglet "Actions" 
+      # pour pouvoir les télécharger directement sans passer par les Releases.
+      - name: Sauvegarder les exécutables locaux (Artifacts)
         uses: actions/upload-artifact@v4
         with:
           name: Atheris-Launcher-${{ matrix.os }}
