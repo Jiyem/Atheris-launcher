@@ -34,9 +34,7 @@ jobs:
         run: npm ci
         shell: bash
 
-      # On utilise 'npm run build' qui contient bien '--build=platform' pour réveiller ton build.js.
-      # L'ajout des flags --win, --linux et --mac force electron-builder (appelé par ton script)
-      # à générer le bon format selon l'OS de la machine virtuelle.
+      # --- BLOC WINDOWS ---
       - name: Build Launcher (Windows)
         if: matrix.os == 'windows-2022'
         env:
@@ -46,6 +44,13 @@ jobs:
         run: npm run build -- --win
         shell: bash
 
+      # Diagnostiquer le contenu exact du dossier dist sous Windows si ça échoue
+      - name: Liste des fichiers générés (Windows)
+        if: matrix.os == 'windows-2022'
+        run: Get-ChildItem -Path . -Recurse -Depth 2 | Select-Object FullName
+        shell: powershell
+
+      # --- BLOC LINUX ---
       - name: Build Launcher (Linux)
         if: matrix.os == 'ubuntu-latest'
         env:
@@ -54,6 +59,7 @@ jobs:
         run: npm run build -- --linux
         shell: bash
 
+      # --- BLOC MAC ---
       - name: Build Launcher (Mac)
         if: matrix.os == 'macos-14'
         env:
@@ -63,15 +69,14 @@ jobs:
         run: npm run build -- --mac
         shell: bash
 
-      # Ton build.js ayant la propriété "directories: { output: 'dist' }",
-      # on cible précisément le dossier dist/ pour récupérer les exécutables.
-      - name: Sauvegarder l'exécutable (Artifacts)
+      # --- SAUVEGARDE DES ARTEFACTS ---
+      # Au lieu de chercher des extensions précises, on prend TOUT le contenu du dossier dist
+      # s'il a été créé par electron-builder.
+      - name: Sauvegarder le dossier de sortie (Artifacts)
         uses: actions/upload-artifact@v4
         with:
-          name: Atheris-Launcher-${{ matrix.os }}
+          name: Atheris-Launcher-Dossier-${{ matrix.os }}
           path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.zip
-            dist/*.AppImage
+            dist/
+            app/
           if-no-files-found: warn
