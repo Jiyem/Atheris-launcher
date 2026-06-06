@@ -8,19 +8,12 @@ permissions:
   packages: write
 
 jobs:
-  build-and-release:
+  build-launcher:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # On associe chaque OS GitHub à la cible exacte attendue par votre script build.js
-        include:
-          - os: windows-2022
-            platform_target: win
-          - os: ubuntu-latest
-            platform_target: linux
-          - os: macos-14
-            platform_target: mac
+        os: [macos-14, ubuntu-latest, windows-2022]
 
     steps:
       - name: Check out Git repository
@@ -41,22 +34,44 @@ jobs:
         run: npm ci
         shell: bash
 
-      # Ici, on remplace "platform" dynamiquement par win, linux ou mac selon la machine
-      # On retire le '-- --publish' qui faisait potentiellement planter votre build.js
-      - name: Build Launcher
+      # On utilise 'npm run build' qui contient bien '--build=platform' pour réveiller ton build.js.
+      # L'ajout des flags --win, --linux et --mac force electron-builder (appelé par ton script)
+      # à générer le bon format selon l'OS de la machine virtuelle.
+      - name: Build Launcher (Windows)
+        if: matrix.os == 'windows-2022'
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTODISCOVER: false
-        run: node build.js --obf=true --build=${{ matrix.platform_target }}
+        run: npm run build -- --win
         shell: bash
 
-      # Étape essentielle : On récupère le fichier .exe (ou autre) généré localement
-      - name: Sauvegarder les exécutables (Artifacts)
+      - name: Build Launcher (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build -- --linux
+        shell: bash
+
+      - name: Build Launcher (Mac)
+        if: matrix.os == 'macos-14'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTODISCOVER: false
+        run: npm run build -- --mac
+        shell: bash
+
+      # Ton build.js ayant la propriété "directories: { output: 'dist' }",
+      # on cible précisément le dossier dist/ pour récupérer les exécutables.
+      - name: Sauvegarder l'exécutable (Artifacts)
         uses: actions/upload-artifact@v4
         with:
-          name: Atheris-Launcher-${{ matrix.platform_target }}
+          name: Atheris-Launcher-${{ matrix.os }}
           path: |
-            dist/
-            build/
-            out/
-            release/
-          if-no-files-found: ignore
+            dist/*.exe
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+          if-no-files-found: warn
