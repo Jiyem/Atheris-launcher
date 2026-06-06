@@ -80,6 +80,8 @@ class Index {
                 asar: true,
                 publish: [{
                     provider: "github",
+                    owner: "Jiyem",
+                    repo: "Atheris-launcher",
                     releaseType: 'release',
                 }],
                 win: {
