@@ -1,19 +1,20 @@
-name: Launcher Build
+name: Auto Release App
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master # Se déclenche à chaque push sur master
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  build-launcher:
+  build-and-release:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-latest, windows-2022]
+        os: [windows-2022, ubuntu-latest, macos-14]
 
     steps:
       - name: Check out Git repository
@@ -34,51 +35,21 @@ jobs:
         run: npm ci
         shell: bash
 
-      # --- BLOC WINDOWS ---
-      - name: Build Launcher (Windows)
-        if: matrix.os == 'windows-2022'
+      # Cette étape extrait proprement la version du package.json pour la donner à GitHub
+      - name: Get Version from package.json
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "APP_VERSION=v$VERSION" >> $GITHUB_ENV
+        shell: bash
+
+      # Compilation et publication automatique.
+      # electron-builder va créer la release nommée selon la version du package.json
+      # si elle n'existe pas encore.
+      - name: Build and Publish Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTODISCOVER: false
-        run: npm run build -- --win
-        #run: node build.js --obf=false --build=platform --win
+        run: node build.js --obf=true --build=platform --${{ matrix.os == 'windows-2022' && 'win' || matrix.os == 'ubuntu-latest' && 'linux' || 'mac' }}
         shell: bash
-
-      # Diagnostiquer le contenu exact du dossier dist sous Windows si ça échoue
-      - name: Liste des fichiers générés (Windows)
-        if: matrix.os == 'windows-2022'
-        run: Get-ChildItem -Path . -Recurse -Depth 2 | Select-Object FullName
-        shell: powershell
-
-      # --- BLOC LINUX ---
-      - name: Build Launcher (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build -- --linux
-        shell: bash
-
-      # --- BLOC MAC ---
-      - name: Build Launcher (Mac)
-        if: matrix.os == 'macos-14'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTODISCOVER: false
-        run: npm run build -- --mac
-        shell: bash
-
-        
-      # --- SAUVEGARDE DES ARTEFACTS ---
-      # Au lieu de chercher des extensions précises, on prend TOUT le contenu du dossier dist
-      # s'il a été créé par electron-builder.
-      - name: Sauvegarder le dossier de sortie (Artifacts)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Atheris-Launcher-Dossier-${{ matrix.os }}
-          path: |
-            dist/
-            app/
-          if-no-files-found: warn
