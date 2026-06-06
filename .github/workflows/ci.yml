@@ -1,15 +1,14 @@
-name: Auto Release App
+name: Build Release Assets
 on:
-  push:
-    branches:
-      - master # Se déclenche à chaque push sur master
+  release:
+    types: [published] # Se déclenche AUTOMATIQUEMENT dès que tu publies une Release sur GitHub
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  build-and-release:
+  upload-assets:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -35,21 +34,20 @@ jobs:
         run: npm ci
         shell: bash
 
-      # Cette étape extrait proprement la version du package.json pour la donner à GitHub
-      - name: Get Version from package.json
-        id: get_version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "APP_VERSION=v$VERSION" >> $GITHUB_ENV
-        shell: bash
-
-      # Compilation et publication automatique.
-      # electron-builder va créer la release nommée selon la version du package.json
-      # si elle n'existe pas encore.
-      - name: Build and Publish Release
+      # On compile l'application. Electron-builder va détecter qu'un événement 
+      # de type "Release" est en cours sur GitHub et va injecter les fichiers directement dedans.
+      - name: Build and Upload to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTODISCOVER: false
-        run: node build.js --obf=true --build=platform --${{ matrix.os == 'windows-2022' && 'win' || matrix.os == 'ubuntu-latest' && 'linux' || 'mac' }}
+        run: node build.js --obf=true --build=platform --${{ matrix.os == 'windows-2022' && 'win' || matrix.os == 'ubuntu-latest' && 'linux' || 'mac' }} -- --publish always
         shell: bash
+
+      # SÉCURITÉ : On garde quand même les artefacts au cas où
+      - name: Sauvegarder les exécutables (Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Atheris-Launcher-Dossier-${{ matrix.os }}
+          path: dist/
+          if-no-files-found: warn
