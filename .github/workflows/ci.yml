@@ -7,34 +7,7 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Get version
-        id: get_version
-        run: |
-          VERSION=$(jq -r .version package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_ENV
-      
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.version }}
-          release_name: release ${{ env.version }}
-          draft: false
-          prerelease: ${{ contains(env.version, 'beta') || contains(env.version, 'alpha') }}
-
-  build-launcher:
-    needs: create-release
+  build-and-release:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -48,6 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -58,8 +32,23 @@ jobs:
         run: npm ci
         shell: bash
 
+      # Cette étape compile l'application ET tente de la publier directement dans les Releases GitHub
       - name: Build and Publish
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # electron-builder utilise souvent GITHUB_TOKEN ou GH_TOKEN
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build -- --publish always
         shell: bash
+
+      # SÉCURITÉ : Si la publication automatique échoue, on sauvegarde quand même les fichiers
+      # Vous pourrez télécharger le .exe directement depuis l'onglet Actions de GitHub
+      - name: Sauvegarder les exécutables (Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Atheris-Launcher-${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.deb
+            dist/*.AppImage
+          if-no-files-found: ignore
