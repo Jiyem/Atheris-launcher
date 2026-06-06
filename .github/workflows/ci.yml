@@ -3,7 +3,6 @@ on:
   push:
     branches: [ master ]
 
-# TRÈS IMPORTANT : On donne les pleins droits pour écrire les releases et les packages
 permissions:
   contents: write
   packages: write
@@ -12,8 +11,16 @@ jobs:
   build-and-release:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-latest, windows-2022]
+        # On associe chaque OS GitHub à la cible exacte attendue par votre script build.js
+        include:
+          - os: windows-2022
+            platform_target: win
+          - os: ubuntu-latest
+            platform_target: linux
+          - os: macos-14
+            platform_target: mac
 
     steps:
       - name: Check out Git repository
@@ -34,23 +41,22 @@ jobs:
         run: npm ci
         shell: bash
 
-      # Compilation et publication (va créer un Draft dans vos Releases)
-      - name: Build and Publish
+      # Ici, on remplace "platform" dynamiquement par win, linux ou mac selon la machine
+      # On retire le '-- --publish' qui faisait potentiellement planter votre build.js
+      - name: Build Launcher
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build -- --publish always
+          CSC_IDENTITY_AUTODISCOVER: false
+        run: node build.js --obf=true --build=${{ matrix.platform_target }}
         shell: bash
 
-      # SÉCURITÉ ABSOLUE : Sauvegarde les fichiers dans l'onglet "Actions" 
-      # pour pouvoir les télécharger directement sans passer par les Releases.
-      - name: Sauvegarder les exécutables locaux (Artifacts)
+      # Étape essentielle : On récupère le fichier .exe (ou autre) généré localement
+      - name: Sauvegarder les exécutables (Artifacts)
         uses: actions/upload-artifact@v4
         with:
-          name: Atheris-Launcher-${{ matrix.os }}
+          name: Atheris-Launcher-${{ matrix.platform_target }}
           path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.deb
-            dist/*.AppImage
+            dist/
+            build/
+            out/
+            release/
           if-no-files-found: ignore
