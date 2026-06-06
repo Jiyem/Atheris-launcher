@@ -41,8 +41,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTODISCOVER: false
-        #run: npm run build -- --win
-        run: node build.js --obf=false --build=platform --win
+        run: npm run build -- --win
+        #run: node build.js --obf=false --build=platform --win
         shell: bash
 
       # Diagnostiquer le contenu exact du dossier dist sous Windows si ça échoue

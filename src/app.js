@@ -71,9 +71,10 @@ ipcMain.handle('update-app', async () => {
         autoUpdater.checkForUpdates().then(res => {
             resolve(res);
         }).catch(error => {
+            // On extrait le message texte de l'erreur pour Electron
             reject({
                 error: true,
-                message: error
+                message: error.message || error.toString()
             })
         })
     })
