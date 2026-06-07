@@ -41,7 +41,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTODISCOVER: false
-        run: node build.js --obf=false --build=platform --${{ matrix.os == 'windows-2022' && 'win' || matrix.os == 'ubuntu-latest' && 'linux' || 'mac' }} -- --publish always
+        run: node build.js --obf=true --build=platform --${{ matrix.os == 'windows-2022' && 'win' || matrix.os == 'ubuntu-latest' && 'linux' || 'mac' }} -- --publish always
         shell: bash
 
       # SÉCURITÉ : On garde quand même les artefacts au cas où

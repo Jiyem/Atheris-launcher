@@ -4,6 +4,7 @@
  * https://creativecommons.org/licenses/by-nc/4.0/
  *
  * Edited by CentralCorp Team
+ * Modifié par Jiyem
  */
 const fs = require("fs");
 const builder = require('electron-builder')
@@ -48,14 +49,24 @@ class Index {
             if (extFile == 'js') {
                 let code = fs.readFileSync(path, "utf8");
                 code = code.replace(/src\//g, 'app/');
-                if (this.obf) {
+
+                // AJOUT : Exclure le fichier d'entrée d'Electron (extraMetadata: { main: 'app/app.js' })
+                // Si l'obfuscateur touche à app.js, Electron ne trouve plus ses points d'ancrage globaux.
+                const isMainProcessFile = fileName === 'app.js';
+
+                if (this.obf && !isMainProcessFile) {
                     await new Promise((resolve) => {
                         console.log(`Obfuscate ${path}`);
-                        let obf = JavaScriptObfuscator.obfuscate(code, { optionsPreset: 'medium-obfuscation', disableConsoleOutput: false });
+                        let obf = JavaScriptObfuscator.obfuscate(code, { 
+                            optionsPreset: 'medium-obfuscation', 
+                            disableConsoleOutput: false,
+                            // Sécurité indispensable pour Electron : empêche le plantage du système de fichiers virtuel ASAR
+                            selfDefending: false 
+                        });
                         resolve(fs.writeFileSync(`${folder}/${fileName}`, obf.getObfuscatedCode(), { encoding: "utf-8" }));
                     })
                 } else {
-                    console.log(`Copy ${path}`);
+                    console.log(`Copy (No Obfuscation) ${path}`);
                     fs.writeFileSync(`${folder}/${fileName}`, code, { encoding: "utf-8" });
                 }
             } else {
