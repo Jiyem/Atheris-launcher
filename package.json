@@ -1,7 +1,7 @@
 {
     "name": "atheris",
     "preductname": "Atheris Launcher",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "description": "Launcher pour le serveur moddé Atheris by Jiyem",
     "main": "src/app.js",
     "author": "Jiyem, Riptiaz/Boulldogo/Vexato/Luuxis",
